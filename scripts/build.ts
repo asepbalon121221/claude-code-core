@@ -26,6 +26,8 @@ const packageStubs: Record<string, string> = existsSync(MANIFEST_PATH)
   : {}
 
 const defines: Record<string, string> = {
+  // Critical: without this React may embed both dev+prod copies → Invalid hook call
+  'process.env.NODE_ENV': JSON.stringify('production'),
   'process.env.USER_TYPE': JSON.stringify('external'),
   'process.env.CLAUDE_CODE_ENTRYPOINT': JSON.stringify('cli'),
   'MACRO.VERSION': JSON.stringify(VERSION),
@@ -39,6 +41,25 @@ const defines: Record<string, string> = {
   'MACRO.ISSUES_EXPLAINER': JSON.stringify('report it on GitHub'),
 }
 
+const reactAliases: Record<string, string> = {
+  react: Bun.resolveSync('react', ROOT),
+  'react/jsx-runtime': Bun.resolveSync('react/jsx-runtime', ROOT),
+  'react/jsx-dev-runtime': Bun.resolveSync('react/jsx-dev-runtime', ROOT),
+  'react-reconciler': Bun.resolveSync('react-reconciler', ROOT),
+  'react-reconciler/constants': Bun.resolveSync(
+    'react-reconciler/constants',
+    ROOT,
+  ),
+}
+try {
+  reactAliases['react/compiler-runtime'] = Bun.resolveSync(
+    'react/compiler-runtime',
+    ROOT,
+  )
+} catch {
+  // optional
+}
+
 const stubPlugin = {
   name: 'core-stubs',
   setup(build: {
@@ -49,6 +70,12 @@ const stubPlugin = {
   }) {
     for (const [name, path] of Object.entries(NATIVE_TS_ALIASES)) {
       build.onResolve({ filter: new RegExp(`^${name}$`) }, () => ({ path }))
+    }
+    for (const [name, path] of Object.entries(reactAliases)) {
+      build.onResolve(
+        { filter: new RegExp(`^${name.replaceAll('/', '\\/')}$`) },
+        () => ({ path }),
+      )
     }
     for (const [name, path] of Object.entries(packageStubs)) {
       build.onResolve(
@@ -70,6 +97,7 @@ if (mode === 'js') {
     define: defines,
     naming: 'claude.js',
     sourcemap: 'external',
+    packages: 'bundle',
   })
   if (!result.success) {
     console.error(...result.logs)
@@ -83,6 +111,7 @@ if (mode === 'js') {
     plugins: [stubPlugin],
     define: defines,
     minify: true,
+    packages: 'bundle',
     compile: {
       target: 'bun-linux-x64',
       outfile,
