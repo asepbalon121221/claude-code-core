@@ -10,6 +10,7 @@ import {
   applyRouterDefaultsIfUnset,
   getRouterDefaults,
   isRouterDefaultBaseUrl,
+  isRouterPreconfigured,
   ROUTER_DEFAULT_BASE_URL,
   ROUTER_DEFAULT_MODEL,
 } from './routerDefaults.js'
@@ -147,7 +148,34 @@ async function main(): Promise<void> {
     'must not overwrite ANTHROPIC_MODEL',
   )
 
+  const preconfKeys = [
+    'ANTHROPIC_BASE_URL',
+    'ANTHROPIC_AUTH_TOKEN',
+    'ANTHROPIC_API_KEY',
+    'CLAUDE_CODE_FORCE_ONBOARDING',
+  ]
+  for (const k of preconfKeys) delete process.env[k]
+  assert(!isRouterPreconfigured(), 'no base URL and no key must not be preconfigured')
+
+  applyRouterDefaultsIfUnset()
+  assert(!isRouterPreconfigured(), 'base URL without a key must not be preconfigured')
+
+  process.env.ANTHROPIC_AUTH_TOKEN = 'test-token'
+  assert(isRouterPreconfigured(), 'base URL plus auth token must be preconfigured')
+
+  delete process.env.ANTHROPIC_AUTH_TOKEN
+  process.env.ANTHROPIC_API_KEY = 'test-key'
+  assert(isRouterPreconfigured(), 'base URL plus API key must be preconfigured')
+
+  process.env.CLAUDE_CODE_FORCE_ONBOARDING = '1'
+  assert(!isRouterPreconfigured(), 'CLAUDE_CODE_FORCE_ONBOARDING must restore onboarding')
+  process.env.CLAUDE_CODE_FORCE_ONBOARDING = '0'
+  assert(isRouterPreconfigured(), 'CLAUDE_CODE_FORCE_ONBOARDING=0 must stay preconfigured')
+
   restoreEnv(snap, Object.keys(snap))
+  for (const k of preconfKeys) {
+    if (!(k in snap)) delete process.env[k]
+  }
   console.log('assert check: OK')
 
   if (process.env.ROUTER_LIVE_CHECK === '1') {

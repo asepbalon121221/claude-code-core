@@ -27,6 +27,7 @@ import { updateGithubRepoPathMapping } from './utils/githubRepoPathMapping.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import type { PermissionMode } from './utils/permissions/PermissionMode.js';
 import { getBaseRenderOptions } from './utils/renderOptions.js';
+import { isRouterPreconfigured } from './utils/routerDefaults.js';
 import { getSettingsWithAllErrors } from './utils/settings/allErrors.js';
 import { hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt } from './utils/settings/settings.js';
 export function completeOnboarding(): void {
@@ -34,6 +35,30 @@ export function completeOnboarding(): void {
     ...current,
     hasCompletedOnboarding: true,
     lastOnboardingVersion: MACRO.VERSION
+  }));
+}
+
+/**
+ * Fork: when the router base URL and its key are supplied by the environment,
+ * onboarding has nothing to ask — the theme has a default and the key is already
+ * chosen — so record it as done and pre-approve the key instead of prompting.
+ */
+function acceptRouterPreconfiguredSetup(): void {
+  const config = getGlobalConfig();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const truncatedApiKey = apiKey && !isRunningOnHomespace() ? normalizeApiKeyForConfig(apiKey) : undefined;
+  const needsApproval = truncatedApiKey !== undefined && getCustomApiKeyStatus(truncatedApiKey) !== 'approved';
+  if (config.theme && config.hasCompletedOnboarding && !needsApproval) {
+    return;
+  }
+  saveGlobalConfig(current => ({
+    ...current,
+    hasCompletedOnboarding: true,
+    lastOnboardingVersion: MACRO.VERSION,
+    customApiKeyResponses: truncatedApiKey && needsApproval ? {
+      ...current.customApiKeyResponses,
+      approved: [...(current.customApiKeyResponses?.approved ?? []), truncatedApiKey]
+    } : current.customApiKeyResponses
   }));
 }
 export function showDialog<T = void>(root: Root, renderer: (done: (result: T) => void) => React.ReactNode): Promise<T> {
@@ -105,6 +130,9 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   if ("production" === 'test' || isEnvTruthy(false) || process.env.IS_DEMO // Skip onboarding in demo mode
   ) {
     return false;
+  }
+  if (isRouterPreconfigured()) {
+    acceptRouterPreconfiguredSetup();
   }
   const config = getGlobalConfig();
   let onboardingShown = false;

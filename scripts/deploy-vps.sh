@@ -45,18 +45,49 @@ cat > '$ENV_FILE' <<'ENV'
 ANTHROPIC_BASE_URL=https://xd-vps-production.up.railway.app/v1
 ANTHROPIC_MODEL=main
 ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
-ANTHROPIC_API_KEY=${ANTHROPIC_AUTH_TOKEN}
 USE_BUILTIN_RIPGREP=0
+CLAUDE_CODE_DISABLE_MIN_VERSION=1
 ENV
 chmod 600 '$ENV_FILE'
 cat > '$WRAPPER' <<'WRAP'
 #!/bin/bash
+set -euo pipefail
+ENV_FILE=/etc/claude-code-router.env
+if [[ ! -r "\$ENV_FILE" ]]; then
+  echo "Missing \$ENV_FILE. Run: sudo claude-set-key" >&2
+  exit 1
+fi
 set -a
-. /etc/claude-code-router.env
+. "\$ENV_FILE"
 set +a
+if [[ -z "\${ANTHROPIC_AUTH_TOKEN:-\${ANTHROPIC_API_KEY:-}}" ]]; then
+  echo "Router API key is empty. Run: sudo claude-set-key" >&2
+  exit 1
+fi
 exec /opt/claude-code/claude "\$@"
 WRAP
 chmod 755 '$WRAPPER'
+cat > /usr/local/bin/claude-set-key <<'SETKEY'
+#!/bin/bash
+# Set or rotate the router API key used by the \`claude\` wrapper.
+set -euo pipefail
+ENV_FILE=/etc/claude-code-router.env
+KEY="\${1:-}"
+if [[ -z "\$KEY" ]]; then
+  read -rsp "Router API key: " KEY
+  echo
+fi
+if [[ -z "\$KEY" ]]; then
+  echo "No key given." >&2
+  exit 1
+fi
+touch "\$ENV_FILE"
+chmod 600 "\$ENV_FILE"
+sed -i '/^ANTHROPIC_AUTH_TOKEN=/d;/^ANTHROPIC_API_KEY=/d' "\$ENV_FILE"
+printf 'ANTHROPIC_AUTH_TOKEN=%s\n' "\$KEY" >> "\$ENV_FILE"
+echo "Saved to \$ENV_FILE"
+SETKEY
+chmod 755 /usr/local/bin/claude-set-key
 command -v rg >/dev/null || (apt-get update && apt-get install -y ripgrep) || true
 claude --version
 claude --help | head -n 5

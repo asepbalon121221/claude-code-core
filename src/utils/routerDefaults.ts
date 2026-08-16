@@ -38,6 +38,21 @@ export function isRouterDefaultBaseUrl(
 }
 
 /**
+ * True when base URL and credentials both come from the environment, so first-run
+ * onboarding (theme, OAuth, API-key approval) has nothing left to ask.
+ * Set CLAUDE_CODE_FORCE_ONBOARDING=1 to get the setup screens back.
+ */
+export function isRouterPreconfigured(): boolean {
+  const forced = process.env.CLAUDE_CODE_FORCE_ONBOARDING?.trim().toLowerCase()
+  if (forced && forced !== '0' && forced !== 'false') return false
+  return (
+    !isUnset(process.env.ANTHROPIC_BASE_URL) &&
+    (!isUnset(process.env.ANTHROPIC_AUTH_TOKEN) ||
+      !isUnset(process.env.ANTHROPIC_API_KEY))
+  )
+}
+
+/**
  * Fill safe ANTHROPIC_* defaults only when unset. Call before settings env apply
  * so trusted settings can still override afterwards.
  */
