@@ -71,6 +71,13 @@ export async function assertMinVersion(): Promise<void> {
   if (process.env.NODE_ENV === 'test') {
     return
   }
+  // Fork builds / custom gateways should not be blocked by Anthropic min-version.
+  if (
+    process.env.CLAUDE_CODE_DISABLE_MIN_VERSION === '1' ||
+    process.env.ANTHROPIC_BASE_URL
+  ) {
+    return
+  }
 
   try {
     const versionConfig = await getDynamicConfig_BLOCKS_ON_INIT<{

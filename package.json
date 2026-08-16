@@ -1,6 +1,6 @@
 {
   "name": "claude-code-core",
-  "version": "0.1.0-core",
+  "version": "2.1.233-core",
   "private": true,
   "type": "module",
   "description": "Core Claude Code Linux x64 rebuild from source dump (external feature set)",

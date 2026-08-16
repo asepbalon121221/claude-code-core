@@ -12,7 +12,7 @@ const OUT_DIR = join(ROOT, 'dist')
 const ENTRY = join(ROOT, 'src/entrypoints/cli.tsx')
 const MANIFEST_PATH = join(ROOT, 'scripts/stubs/packages/manifest.json')
 
-const VERSION = process.env.CLAUDE_CODE_VERSION || '0.1.0-core'
+const VERSION = process.env.CLAUDE_CODE_VERSION || '2.1.233-core'
 const mode = process.argv.includes('--js') ? 'js' : 'linux-x64'
 
 mkdirSync(OUT_DIR, { recursive: true })
