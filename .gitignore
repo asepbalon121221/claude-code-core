@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+claude-code-router.env
+src/Untitled
+.DS_Store
+Thumbs.db
+*.tgz
+.claude/

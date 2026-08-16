@@ -19,6 +19,10 @@ import {
   modelSupports1M,
 } from '../context.js'
 import { isEnvTruthy } from '../envUtils.js'
+import {
+  isRouterDefaultBaseUrl,
+  ROUTER_DEFAULT_MODEL,
+} from '../routerDefaults.js'
 import { getModelStrings, resolveOverriddenModel } from './modelStrings.js'
 import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
@@ -176,6 +180,11 @@ export function getRuntimeMainLoopModel(params: {
  * @returns The default model setting to use
  */
 export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
+  // Fork default: VPS Docker router → model id `main`
+  if (isRouterDefaultBaseUrl()) {
+    return ROUTER_DEFAULT_MODEL
+  }
+
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
   if (process.env.USER_TYPE === 'ant') {
     return (

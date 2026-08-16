@@ -36,6 +36,7 @@ import {
   applyConfigEnvironmentVariables,
   applySafeConfigEnvironmentVariables,
 } from '../utils/managedEnv.js'
+import { applyRouterDefaultsIfUnset } from '../utils/routerDefaults.js'
 import { configureGlobalMTLS } from '../utils/mtls.js'
 import {
   ensureScratchpadDir,
@@ -67,6 +68,9 @@ export const init = memoize(async (): Promise<void> => {
       duration_ms: Date.now() - configsStart,
     })
     profileCheckpoint('init_configs_enabled')
+
+    // Fork default: VPS Docker Anthropic-Messages router (only fills unset env)
+    applyRouterDefaultsIfUnset()
 
     // Apply only safe environment variables before trust dialog
     // Full environment variables are applied after trust is established
